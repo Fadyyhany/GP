@@ -15,7 +15,9 @@ from tensorflow.keras import layers, models, callbacks
 
 def build_model(input_shape):
     model = models.Sequential([
-        layers.Conv1D(32, kernel_size=5, activation='relu', input_shape=input_shape),
+        layers.Input(shape=input_shape),
+
+        layers.Conv1D(32, kernel_size=5, activation='relu'),
         layers.BatchNormalization(),
         layers.MaxPooling1D(pool_size=2),
 
@@ -39,9 +41,22 @@ def build_model(input_shape):
 
     return model
 
-def convert_to_tflite(model, output_path='models/crash_detector.tflite'):
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+def convert_to_tflite(model, input_shape, output_path='models/crash_detector.tflite'):
+    """Convert to TFLite using concrete function to handle LSTM properly."""
+    # Create a concrete function with fixed input shape
+    run_model = tf.function(lambda x: model(x))
+    concrete_func = run_model.get_concrete_function(
+        tf.TensorSpec([1, input_shape[0], input_shape[1]], dtype=tf.float32)
+    )
+
+    converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func])
+    converter.optimizations = [tf.lite.optimize.DEFAULT]
+    converter.target_spec.supported_ops = [
+        tf.lite.OpsSet.TFLITE_BUILTINS,
+        tf.lite.OpsSet.SELECT_TF_OPS
+    ]
+    converter._experimental_lower_tensor_list_ops = False
+
     tflite_model = converter.convert()
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -95,7 +110,7 @@ def main():
     print("Keras model saved: models/crash_detector.keras")
 
     print("\nConverting to TFLite...")
-    convert_to_tflite(model)
+    convert_to_tflite(model, input_shape)
 
     print("\nDone! Run 4_evaluate_model.py next.")
 
