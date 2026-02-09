@@ -43,13 +43,12 @@ def build_model(input_shape):
 
 def convert_to_tflite(model, input_shape, output_path='models/crash_detector.tflite'):
     """Convert to TFLite using concrete function to handle LSTM properly."""
-    # Create a concrete function with fixed input shape
     run_model = tf.function(lambda x: model(x))
     concrete_func = run_model.get_concrete_function(
         tf.TensorSpec([1, input_shape[0], input_shape[1]], dtype=tf.float32)
     )
 
-    converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func])
+    converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func], model)
     converter.optimizations = [tf.lite.optimize.DEFAULT]
     converter.target_spec.supported_ops = [
         tf.lite.OpsSet.TFLITE_BUILTINS,
