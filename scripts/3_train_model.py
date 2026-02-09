@@ -49,7 +49,7 @@ def convert_to_tflite(model, input_shape, output_path='models/crash_detector.tfl
     )
 
     converter = tf.lite.TFLiteConverter.from_concrete_functions([concrete_func], model)
-    converter.optimizations = [tf.lite.optimize.DEFAULT]
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_spec.supported_ops = [
         tf.lite.OpsSet.TFLITE_BUILTINS,
         tf.lite.OpsSet.SELECT_TF_OPS
